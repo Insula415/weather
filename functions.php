@@ -54,19 +54,21 @@ function get_weather_data($city = null, $coords = null) {
     if ($city !== null) {
         $api_url = 'https://api.openweathermap.org/data/2.5/weather?q=' . urlencode($city) . '&appid=' . $api_key;
     } elseif ($coords !== null) {
-        $api_url = 'https://api.openweathermap.org/data/2.5/weather?lat=' . urlencode($coords['lat']) . '&lon=' . urlencode($coords['lon']) . '&appid=' . $api_key;
+        $api_url = 'https://api.openweathermap.org/data/2.5/onecall?lat=' . urlencode($coords['lat']) . '&lon=' . urlencode($coords['lon']) . '&exclude=current,minutely,hourly,alerts&appid=' . $api_key;
     } else {
         return false;
     }
 
+    
     $response = wp_remote_get($api_url);
-
+    
     if (is_wp_error($response)) {
         return false;
     }
-
+    
     return json_decode(wp_remote_retrieve_body($response), true);
 }
+
 
 // displays weather data on the page
 function display_weather_data($data, $location_name = null, $coords = null) {
@@ -92,22 +94,25 @@ function display_weather_data($data, $location_name = null, $coords = null) {
 
     if (isset($data['daily'])) {
         echo '<h2>Forecast for the next 7 days</h2>';
-        foreach ($data['daily'] as $day) {
-            echo '<p>Day ' . esc_html($day['dt']) . ':</p>';
+        foreach ($data['daily'] as $index => $day) {
+            $date = date('l, F j, Y', $day['dt']); // Converts Unix timestamp to "Day, Month day, Year"
+            echo '<details ' . ($index === 0 ? 'open' : '') . '>'; // If it's the first day (index 0), add the 'open' attribute
+            echo '<summary>Day: ' . esc_html($date) . '</summary>';
+            echo '<div>';
             echo '<p>Temperature: ' . esc_html($day['temp']['day']) . ' Kelvin</p>';
             echo '<p>Feels Like: ' . esc_html($day['feels_like']['day']) . ' Kelvin</p>';
             echo '<p>Humidity: ' . esc_html($day['humidity']) . '%</p>';
             echo '<p>Wind Speed: ' . esc_html($day['wind_speed']) . ' m/s</p>';
+            echo '</div>';
+            echo '</details>';
         }
     }
-
     if (!isset($data['main']) && !isset($data['daily'])) {
         echo '<p>Sorry, we couldn\'t fetch the weather data. Please check the name of the city or the coordinates and try again.</p>';
     }
 }
 
 function weather_theme_scripts() {
-    wp_enqueue_style('style-name', get_stylesheet_uri());
+    wp_enqueue_style('style.min', get_stylesheet_directory_uri() . '/style.min.css');
 }
 add_action('wp_enqueue_scripts', 'weather_theme_scripts');
-?>
